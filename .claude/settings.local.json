@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node *)",
+      "Bash(npm run *)",
+      "mcp__plugin_oh-my-claudecode_t__state_read",
+      "Bash(docker exec *)",
+      "Bash(npx jest *)",
+      "Bash(git checkout *)",
+      "Bash(git push *)"
+    ]
+  }
+}
