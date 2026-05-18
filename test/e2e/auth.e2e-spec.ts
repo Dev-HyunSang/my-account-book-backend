@@ -76,7 +76,7 @@ describe('Auth flow (e2e)', () => {
     it('returns 200 with token pair on correct credentials', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .send(validCreds)
+        .send({ email: validCreds.email, password: validCreds.password })
         .expect(200);
       expect(res.body.accessToken).toBeDefined();
       expect(res.body.refreshToken).toBeDefined();
@@ -85,7 +85,7 @@ describe('Auth flow (e2e)', () => {
     it('returns 401 on wrong password', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .send({ ...validCreds, password: 'wrongpass11' })
+        .send({ email: validCreds.email, password: 'wrongpass11' })
         .expect(401);
     });
 
