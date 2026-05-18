@@ -69,6 +69,7 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+      - run: npm run migration:run
       - run: npm run test:e2e
 
   docker-build:
