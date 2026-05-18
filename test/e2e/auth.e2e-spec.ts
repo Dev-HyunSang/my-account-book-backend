@@ -4,6 +4,7 @@ import * as request from 'supertest';
 import { Redis } from 'ioredis';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../../src/app.module';
+import { AuthModule } from '../../src/auth/auth.module';
 import { REDIS } from '../../src/redis/redis.constants';
 import { ProtectedController } from './fixtures/protected.controller';
 
@@ -14,7 +15,7 @@ describe('Auth flow (e2e)', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [AppModule, AuthModule],
       controllers: [ProtectedController],
     }).compile();
 
