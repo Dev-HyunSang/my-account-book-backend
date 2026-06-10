@@ -19,6 +19,7 @@ import { AuthenticatedUser } from '../auth/types';
 import { PaginationDto } from '../common/pagination.dto';
 import { CreateIncomeDto } from './dto/create-income.dto';
 import { IncomeResponseDto } from './dto/income.response';
+import { PaginatedIncomesResponseDto } from './dto/paginated-incomes.response';
 import { UpdateIncomeDto } from './dto/update-income.dto';
 import { IncomesService } from './incomes.service';
 
@@ -46,12 +47,12 @@ export class IncomesController {
   @ApiOperation({
     summary: "List the authenticated user's income entries, newest income_date first",
   })
-  @ApiResponse({ status: 200, description: 'Page of incomes.' })
+  @ApiResponse({ status: 200, description: 'Page of incomes.', type: PaginatedIncomesResponseDto })
   @ApiResponse({ status: 401, description: 'Missing or invalid bearer token.' })
   list(
     @CurrentUser() user: AuthenticatedUser,
     @Query() pagination: PaginationDto,
-  ): Promise<{ items: IncomeResponseDto[]; total: number; offset: number; limit: number }> {
+  ): Promise<PaginatedIncomesResponseDto> {
     return this.incomes.list(user.userId, {
       offset: pagination.offset,
       limit: pagination.limit,
