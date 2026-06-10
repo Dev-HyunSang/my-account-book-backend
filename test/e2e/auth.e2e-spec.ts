@@ -43,7 +43,13 @@ describe('Auth flow (e2e)', () => {
     await app.close();
   });
 
-  const validCreds = { email: 'alice@example.com', password: 'pa55word!', nickname: 'Alice' };
+  const validCreds = {
+    email: 'alice@example.com',
+    password: 'pa55word!',
+    nickname: 'Alice',
+    agreeTerms: true,
+    agreePrivacy: true,
+  };
 
   describe('POST /api/v1/auth/register', () => {
     it('returns 201 with token pair on success', async () => {
@@ -63,7 +69,29 @@ describe('Auth flow (e2e)', () => {
     it('returns 400 when password too short', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/register')
-        .send({ email: 'a@b.com', password: 'short', nickname: 'Bob' })
+        .send({
+          email: 'a@b.com',
+          password: 'short',
+          nickname: 'Bob',
+          agreeTerms: true,
+          agreePrivacy: true,
+        })
+        .expect(400);
+    });
+
+    it('returns 400 when terms-of-service agreement is missing', async () => {
+      const { agreeTerms, ...withoutTerms } = validCreds;
+      void agreeTerms;
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send(withoutTerms)
+        .expect(400);
+    });
+
+    it('returns 400 when privacy consent is not true', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send({ ...validCreds, agreePrivacy: false })
         .expect(400);
     });
   });

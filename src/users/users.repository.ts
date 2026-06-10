@@ -27,11 +27,19 @@ export class UsersRepository {
     await this.repo.delete({ id });
   }
 
-  async create(input: { email: string; passwordHash: string; nickname: string }): Promise<User> {
+  async create(input: {
+    email: string;
+    passwordHash: string;
+    nickname: string;
+    termsAgreedAt: Date;
+    privacyAgreedAt: Date;
+  }): Promise<User> {
     const entity = this.repo.create({
       email: input.email.toLowerCase(),
       passwordHash: input.passwordHash,
       nickname: input.nickname,
+      termsAgreedAt: input.termsAgreedAt,
+      privacyAgreedAt: input.privacyAgreedAt,
     });
     try {
       return await this.repo.save(entity);

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
+import { Equals, IsBoolean, IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({
@@ -32,4 +32,21 @@ export class RegisterDto {
   @MinLength(1)
   @MaxLength(50)
   nickname!: string;
+
+  @ApiProperty({
+    description: 'Agreement to the Terms of Service (서비스 이용약관). Must be true to register.',
+    example: true,
+  })
+  @IsBoolean()
+  @Equals(true, { message: 'You must agree to the Terms of Service.' })
+  agreeTerms!: boolean;
+
+  @ApiProperty({
+    description:
+      'Consent to personal information collection & use (개인정보 수집·이용 동의). Must be true to register.',
+    example: true,
+  })
+  @IsBoolean()
+  @Equals(true, { message: 'You must consent to the collection and use of personal information.' })
+  agreePrivacy!: boolean;
 }
