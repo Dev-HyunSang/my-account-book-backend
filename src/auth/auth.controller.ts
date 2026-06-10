@@ -10,7 +10,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { LoginDto } from './dto/login.dto';
@@ -33,6 +33,13 @@ export class AuthController {
   @Get('verify')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
+  @ApiHeader({
+    name: 'Authorization',
+    description:
+      'Bearer access token to verify, formatted as `Bearer <token>`. Optional — when the header is missing or malformed the endpoint responds with `{ valid: false, expiresAt: null }`.',
+    required: false,
+    example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
   @ApiOperation({
     summary: 'Verify an access token signature and expiry',
     description:

@@ -10,6 +10,8 @@ function buildUser(overrides: Partial<User> = {}): User {
     email: 'alice@example.com',
     passwordHash: 'hashed',
     nickname: 'Alice',
+    termsAgreedAt: now,
+    privacyAgreedAt: now,
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -97,21 +99,28 @@ describe('UsersRepository', () => {
       const saved = buildUser({ id: 'u-new', email: 'a@b.com' });
       repo.save.mockResolvedValue(saved);
 
+      const agreedAt = new Date('2026-01-01T00:00:00.000Z');
       const result = await users.create({
         email: 'A@B.com',
         passwordHash: 'hashed',
         nickname: 'Alice',
+        termsAgreedAt: agreedAt,
+        privacyAgreedAt: agreedAt,
       });
 
       expect(repo.create).toHaveBeenCalledWith({
         email: 'a@b.com',
         passwordHash: 'hashed',
         nickname: 'Alice',
+        termsAgreedAt: agreedAt,
+        privacyAgreedAt: agreedAt,
       });
       expect(repo.save).toHaveBeenCalledWith({
         email: 'a@b.com',
         passwordHash: 'hashed',
         nickname: 'Alice',
+        termsAgreedAt: agreedAt,
+        privacyAgreedAt: agreedAt,
       });
       expect(result).toBe(saved);
     });
@@ -121,10 +130,22 @@ describe('UsersRepository', () => {
       repo.save.mockRejectedValue(err);
 
       await expect(
-        users.create({ email: 'dup@x.com', passwordHash: 'h', nickname: 'Dup' }),
+        users.create({
+          email: 'dup@x.com',
+          passwordHash: 'h',
+          nickname: 'Dup',
+          termsAgreedAt: new Date(),
+          privacyAgreedAt: new Date(),
+        }),
       ).rejects.toThrow(ConflictException);
       await expect(
-        users.create({ email: 'dup@x.com', passwordHash: 'h', nickname: 'Dup' }),
+        users.create({
+          email: 'dup@x.com',
+          passwordHash: 'h',
+          nickname: 'Dup',
+          termsAgreedAt: new Date(),
+          privacyAgreedAt: new Date(),
+        }),
       ).rejects.toThrow('Email already registered');
     });
 
@@ -133,7 +154,13 @@ describe('UsersRepository', () => {
       repo.save.mockRejectedValue(err);
 
       await expect(
-        users.create({ email: 'x@y.com', passwordHash: 'h', nickname: 'X' }),
+        users.create({
+          email: 'x@y.com',
+          passwordHash: 'h',
+          nickname: 'X',
+          termsAgreedAt: new Date(),
+          privacyAgreedAt: new Date(),
+        }),
       ).rejects.toBe(err);
     });
 
@@ -142,7 +169,13 @@ describe('UsersRepository', () => {
       repo.save.mockRejectedValue(err);
 
       await expect(
-        users.create({ email: 'x@y.com', passwordHash: 'h', nickname: 'X' }),
+        users.create({
+          email: 'x@y.com',
+          passwordHash: 'h',
+          nickname: 'X',
+          termsAgreedAt: new Date(),
+          privacyAgreedAt: new Date(),
+        }),
       ).rejects.toBe(err);
     });
   });

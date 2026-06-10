@@ -92,7 +92,13 @@ describe('AuthService', () => {
       tokens.issueTokenPair.mockResolvedValue(fakeIssuedTokens('reg'));
 
       const result = await service.register(
-        { email: 'A@B.com', password: 'pa55word!', nickname: 'Alice' },
+        {
+          email: 'A@B.com',
+          password: 'pa55word!',
+          nickname: 'Alice',
+          agreeTerms: true,
+          agreePrivacy: true,
+        },
         CTX,
       );
 
@@ -101,6 +107,8 @@ describe('AuthService', () => {
         email: 'a@b.com',
         passwordHash: 'hashed-password',
         nickname: 'Alice',
+        termsAgreedAt: expect.any(Date),
+        privacyAgreedAt: expect.any(Date),
       });
       expect(tokens.issueTokenPair).toHaveBeenCalledWith('u-1');
       expect(store.whitelistRefresh).toHaveBeenCalledWith(
@@ -109,12 +117,18 @@ describe('AuthService', () => {
         'refresh-reg',
         REFRESH_TTL_SEC,
       );
-      expect(audit.record).toHaveBeenCalledWith({
-        userId: 'u-1',
-        action: AuditAction.Register,
-        ip: '1.2.3.4',
-        userAgent: 'jest-agent',
-      });
+      expect(audit.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'u-1',
+          action: AuditAction.Register,
+          ip: '1.2.3.4',
+          userAgent: 'jest-agent',
+          metadata: {
+            termsAgreedAt: expect.any(String),
+            privacyAgreedAt: expect.any(String),
+          },
+        }),
+      );
       expect(result).toEqual({ accessToken: 'access-reg', refreshToken: 'refresh-reg' });
     });
 
@@ -122,7 +136,16 @@ describe('AuthService', () => {
       users.create.mockRejectedValue(new ConflictException('Email already registered'));
 
       await expect(
-        service.register({ email: 'dup@x.com', password: 'pa55word!', nickname: 'Dup' }, CTX),
+        service.register(
+          {
+            email: 'dup@x.com',
+            password: 'pa55word!',
+            nickname: 'Dup',
+            agreeTerms: true,
+            agreePrivacy: true,
+          },
+          CTX,
+        ),
       ).rejects.toThrow(ConflictException);
       expect(store.whitelistRefresh).not.toHaveBeenCalled();
       expect(audit.record).not.toHaveBeenCalled();
@@ -132,7 +155,16 @@ describe('AuthService', () => {
       blacklist.isBlacklisted.mockResolvedValue(true);
 
       await expect(
-        service.register({ email: 'banned@x.com', password: 'pa55word!', nickname: 'X' }, CTX),
+        service.register(
+          {
+            email: 'banned@x.com',
+            password: 'pa55word!',
+            nickname: 'X',
+            agreeTerms: true,
+            agreePrivacy: true,
+          },
+          CTX,
+        ),
       ).rejects.toThrow(ConflictException);
 
       expect(users.create).not.toHaveBeenCalled();

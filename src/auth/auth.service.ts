@@ -17,6 +17,8 @@ interface CredentialsInput {
 
 interface RegisterInput extends CredentialsInput {
   nickname: string;
+  agreeTerms: boolean;
+  agreePrivacy: boolean;
 }
 
 interface RefreshInput {
@@ -59,13 +61,27 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
     const passwordHash = await this.hasher.hash(input.password);
-    const user = await this.users.create({ email, passwordHash, nickname: input.nickname });
+    // Record when the user gave consent. The DTO has already enforced that both
+    // agreements are present and true; we only need to stamp the time here.
+    const agreedAt = new Date();
+    const user = await this.users.create({
+      email,
+      passwordHash,
+      nickname: input.nickname,
+      termsAgreedAt: agreedAt,
+      privacyAgreedAt: agreedAt,
+    });
     this.logger.log(`User registered: ${user.id}`);
     await this.audit.record({
       userId: user.id,
       action: AuditAction.Register,
       ip: ctx.ip,
       userAgent: ctx.userAgent,
+      // Append-only proof of consent, independent of the (mutable) user columns.
+      metadata: {
+        termsAgreedAt: agreedAt.toISOString(),
+        privacyAgreedAt: agreedAt.toISOString(),
+      },
     });
     return this.issuePairFor(user.id);
   }
