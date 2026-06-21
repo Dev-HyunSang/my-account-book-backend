@@ -7,7 +7,9 @@
       "Bash(docker exec *)",
       "Bash(npx jest *)",
       "Bash(git checkout *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(npx eslint *)",
+      "Bash(echo \"EXIT:$?\")"
     ]
   }
 }

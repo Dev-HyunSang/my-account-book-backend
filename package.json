@@ -6,7 +6,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "start:dev": "docker-compose -f docker-compose-dev.yml up -d postgres redis && nest start --watch",
+    "start:dev": "docker-compose --env-file .env.dev -f docker-compose-dev.yml up -d postgres redis && nest start --watch",
     "start:prod": "node dist/main.js",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -17,10 +17,11 @@
     "typeorm": "ts-node -r tsconfig-paths/register node_modules/typeorm/cli.js -d src/config/typeorm.config.ts",
     "migration:generate": "npm run typeorm migration:generate",
     "migration:run": "npm run typeorm migration:run",
+    "migration:run:prod": "node ./node_modules/typeorm/cli.js migration:run -d dist/config/typeorm.config.js",
     "migration:revert": "npm run typeorm migration:revert",
     "docker:dev": "docker-compose --env-file .env.dev -f docker-compose-dev.yml up -d",
-    "docker:dev:down": "docker-compose -f docker-compose-dev.yml down",
-    "docker:dev:remove": "docker-compose -f docker-compose-dev.yml down -v"
+    "docker:dev:down": "docker-compose --env-file .env.dev -f docker-compose-dev.yml down",
+    "docker:dev:remove": "docker-compose --env-file .env.dev -f docker-compose-dev.yml down -v"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.17",

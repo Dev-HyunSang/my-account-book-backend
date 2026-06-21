@@ -20,9 +20,10 @@ async function bootstrap() {
   if (process.env.NODE_ENV !== 'production') {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('Account Book API')
-      .setDescription('Personal account-book backend — auth, health, and income tracking.')
+      .setDescription('Personal account-book backend — auth, health, and income/expense tracking.')
       .addTag('auth', 'Register / login / refresh / logout')
       .addTag('incomes', 'Income entries (date, amount, memo) for the authenticated user')
+      .addTag('expenses', 'Expense entries (date, amount, memo) for the authenticated user')
       .addTag('health', 'Liveness and readiness probes')
       .setVersion('0.1.0')
       .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
