@@ -13,6 +13,8 @@ import {
 import { ApiBearerAuth, ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { CheckEmailDto } from './dto/check-email.dto';
+import { EmailAvailabilityResponseDto } from './dto/email-availability.response';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -73,6 +75,23 @@ export class AuthController {
     @Headers('user-agent') userAgent: string | undefined,
   ): Promise<IssuedTokens> {
     return this.authService.register(dto, this.ctx(ip, userAgent));
+  }
+
+  @Post('check-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Check whether an email is already registered',
+    description:
+      'Signup-form helper: reports whether the supplied email can be used to register. Sent as a POST body (not a query string) to keep the email out of URLs and access logs. `available: false` means the email is already taken or blacklisted.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Availability result.',
+    type: EmailAvailabilityResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Validation failed (malformed email).' })
+  checkEmail(@Body() dto: CheckEmailDto): Promise<EmailAvailabilityResponseDto> {
+    return this.authService.checkEmailAvailability(dto.email);
   }
 
   @Post('login')

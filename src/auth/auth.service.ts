@@ -86,6 +86,21 @@ export class AuthService {
     return this.issuePairFor(user.id);
   }
 
+  /**
+   * Reports whether an email is free to register. Mirrors register()'s notion
+   * of "taken": an email is unavailable if a user already owns it OR it is
+   * blacklisted (re-registration is blocked), so the caller never receives a
+   * false "available" that would then 409 at register time. Read-only.
+   */
+  async checkEmailAvailability(email: string): Promise<{ available: boolean }> {
+    const normalized = email.toLowerCase();
+    if (await this.blacklist.isBlacklisted(normalized)) {
+      return { available: false };
+    }
+    const user = await this.users.findByEmail(normalized);
+    return { available: user === null };
+  }
+
   async login(input: CredentialsInput, ctx: RequestContext): Promise<IssuedTokens> {
     const user = await this.users.findByEmail(input.email);
     if (!user) {

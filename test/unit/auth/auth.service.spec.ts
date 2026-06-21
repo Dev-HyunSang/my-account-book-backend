@@ -179,6 +179,35 @@ describe('AuthService', () => {
     });
   });
 
+  describe('checkEmailAvailability', () => {
+    it('returns available=true when the email is free', async () => {
+      users.findByEmail.mockResolvedValue(null);
+
+      const result = await service.checkEmailAvailability('Free@Example.com');
+
+      expect(blacklist.isBlacklisted).toHaveBeenCalledWith('free@example.com');
+      expect(users.findByEmail).toHaveBeenCalledWith('free@example.com');
+      expect(result).toEqual({ available: true });
+    });
+
+    it('returns available=false when a user already owns the email', async () => {
+      users.findByEmail.mockResolvedValue({ id: 'u-1', email: 'taken@example.com' });
+
+      const result = await service.checkEmailAvailability('taken@example.com');
+
+      expect(result).toEqual({ available: false });
+    });
+
+    it('returns available=false for a blacklisted email without querying users', async () => {
+      blacklist.isBlacklisted.mockResolvedValue(true);
+
+      const result = await service.checkEmailAvailability('banned@example.com');
+
+      expect(result).toEqual({ available: false });
+      expect(users.findByEmail).not.toHaveBeenCalled();
+    });
+  });
+
   describe('login', () => {
     it('issues tokens on correct credentials and audits success', async () => {
       users.findByEmail.mockResolvedValue({ id: 'u-2', passwordHash: 'stored-hash' });
