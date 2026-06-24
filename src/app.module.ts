@@ -13,6 +13,7 @@ import { AuditModule } from './audit/audit.module';
 import { BlacklistModule } from './blacklist/blacklist.module';
 import { AuthModule } from './auth/auth.module';
 import { IncomesModule } from './incomes/incomes.module';
+import { ExpensesModule } from './expenses/expenses.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { IncomesModule } from './incomes/incomes.module';
     BlacklistModule,
     AuthModule,
     IncomesModule,
+    ExpensesModule,
     SchedulerModule,
   ],
 })

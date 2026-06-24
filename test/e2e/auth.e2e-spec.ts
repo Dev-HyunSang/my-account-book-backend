@@ -96,6 +96,41 @@ describe('Auth flow (e2e)', () => {
     });
   });
 
+  describe('POST /api/v1/auth/check-email', () => {
+    it('returns { available: true } for an unregistered email', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/auth/check-email')
+        .send({ email: 'nobody@example.com' })
+        .expect(200);
+      expect(res.body).toEqual({ available: true });
+    });
+
+    it('returns { available: false } once the email is registered', async () => {
+      await request(app.getHttpServer()).post('/api/v1/auth/register').send(validCreds).expect(201);
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/auth/check-email')
+        .send({ email: validCreds.email })
+        .expect(200);
+      expect(res.body).toEqual({ available: false });
+    });
+
+    it('is case-insensitive when matching a registered email', async () => {
+      await request(app.getHttpServer()).post('/api/v1/auth/register').send(validCreds).expect(201);
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/auth/check-email')
+        .send({ email: 'ALICE@EXAMPLE.COM' })
+        .expect(200);
+      expect(res.body).toEqual({ available: false });
+    });
+
+    it('returns 400 for a malformed email', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/check-email')
+        .send({ email: 'not-an-email' })
+        .expect(400);
+    });
+  });
+
   describe('POST /api/v1/auth/login', () => {
     beforeEach(async () => {
       await request(app.getHttpServer()).post('/api/v1/auth/register').send(validCreds).expect(201);
