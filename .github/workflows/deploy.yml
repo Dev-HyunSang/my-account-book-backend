@@ -1,0 +1,45 @@
+name: Deploy (trigger Jenkins)
+
+# Runs after merge to main. The GitHub-hosted runner joins the tailnet via
+# Tailscale, then kicks off the Jenkins job (build/test/push/deploy lives in
+# the Jenkinsfile). No public port on Jenkins required.
+#
+# Required repo secrets:
+#   TS_OAUTH_CLIENT_ID / TS_OAUTH_SECRET  -> Tailscale OAuth client (scope: auth_keys), with an ACL tag like tag:ci
+#   JENKINS_URL    -> e.g. http://jenkins.<tailnet>.ts.net:8080
+#   JENKINS_USER   -> Jenkins username
+#   JENKINS_TOKEN  -> that user's API token (Jenkins > user > Configure > API Token)
+#   JENKINS_JOB    -> job name, e.g. account-book
+# ACL: allow tag:ci to reach the Jenkins node on its port.
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  trigger-jenkins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Trigger Jenkins build
+        env:
+          JENKINS_URL: ${{ secrets.JENKINS_URL }}
+          JENKINS_USER: ${{ secrets.JENKINS_USER }}
+          JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}
+          JENKINS_JOB: ${{ secrets.JENKINS_JOB }}
+        run: |
+          set -euo pipefail
+          auth="$JENKINS_USER:$JENKINS_TOKEN"
+          # CSRF crumb (no-op if crumbs are disabled)
+          crumb=$(curl -fsS --user "$auth" \
+            "$JENKINS_URL/crumbIssuer/api/json" \
+            | python3 -c 'import sys,json;print(json.load(sys.stdin)["crumb"])' 2>/dev/null || true)
+          curl -fsS -X POST --user "$auth" \
+            ${crumb:+-H "Jenkins-Crumb: $crumb"} \
+            "$JENKINS_URL/job/$JENKINS_JOB/build"
+          echo "Triggered $JENKINS_JOB"
