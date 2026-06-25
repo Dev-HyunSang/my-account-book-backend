@@ -20,7 +20,7 @@ pipeline {
     DEPLOY_HOST = 'deploy@100.119.217.13'
     DEPLOY_DIR  = '/opt/account-book'
   }
-1
+
   options {
     timestamps()
     disableConcurrentBuilds()
