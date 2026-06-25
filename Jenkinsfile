@@ -40,7 +40,7 @@ pipeline {
     stage('Build & Push') {
       steps {
         script {
-          docker.withRegistry("https://${REGISTRY}", 'registry-cred') {
+          docker.withRegistry("https://${REGISTRY}", 'ghcr_credential') {
             def img = docker.build("${IMAGE}")
             img.push()
             img.push('latest')
