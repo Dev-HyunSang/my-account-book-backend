@@ -1,41 +1,101 @@
-name: Deploy (trigger Jenkins)
+name: Build, Push & Deploy
 
-# Runs after merge to main. The GitHub-hosted runner joins the tailnet via
-# Tailscale, then kicks off the Jenkins job (build/test/push/deploy lives in
-# the Jenkinsfile). No public port on Jenkins required.
+# Runs on merge to main:
+#   1. build the Docker image and push it to ghcr.io (built-in GITHUB_TOKEN, no PAT)
+#   2. join the tailnet via Tailscale, SSH to the deploy host, pull & restart
 #
 # Required repo secrets:
-#   TS_OAUTH_CLIENT_ID / TS_OAUTH_SECRET  -> Tailscale OAuth client (scope: auth_keys), with an ACL tag like tag:ci
-#   JENKINS_URL    -> e.g. http://jenkins.<tailnet>.ts.net:8080
-#   JENKINS_USER   -> Jenkins username
-#   JENKINS_TOKEN  -> that user's API token (Jenkins > user > Configure > API Token)
-#   JENKINS_JOB    -> job name, e.g. account-book
-# ACL: allow tag:ci to reach the Jenkins node on its port.
+#   TS_OAUTH_CLIENT_ID / TS_OAUTH_SECRET -> Tailscale OAuth client (scope: auth_keys), ACL tag tag:ci
+#   DEPLOY_SSH_KEY                        -> private key that logs into deploy@<host>
+# The deploy host must already be `docker login ghcr.io` and hold
+# /opt/account-book/.env.prod (compose reads it).
 
 on:
   push:
     branches: [main]
 
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: ghcr.io/dev-hyunsang/account-book-backend
+  DEPLOY_HOST: deploy@100.119.217.13
+  DEPLOY_DIR: /opt/account-book
+
 jobs:
-  trigger-jenkins:
+  build-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.ref.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=short
+            type=raw,value=latest
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - id: ref
+        run: echo "image=${IMAGE_NAME}:sha-$(echo "${{ github.sha }}" | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: build-push
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - uses: tailscale/github-action@v3
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
 
-      - name: Trigger Jenkins build
+      - name: Add deploy SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Deploy
         env:
-          JENKINS_URL: ${{ secrets.JENKINS_URL }}
-          JENKINS_USER: ${{ secrets.JENKINS_USER }}
-          JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}
-          JENKINS_JOB: ${{ secrets.JENKINS_JOB }}
+          IMAGE: ${{ needs.build-push.outputs.image }}
         run: |
           set -euo pipefail
-          # ponytail: API-token auth is CSRF-crumb exempt. If "API token does not
-          # require CSRF protection" is disabled on this Jenkins, add a crumb fetch.
-          curl -fsS -X POST --user "$JENKINS_USER:$JENKINS_TOKEN" \
-            "$JENKINS_URL/job/$JENKINS_JOB/build"
-          echo "Triggered $JENKINS_JOB"
+          SSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new"
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+            docker-compose.prod.yml "$DEPLOY_HOST:$DEPLOY_DIR/docker-compose.prod.yml"
+          $SSH "$DEPLOY_HOST" "
+            set -e
+            cd $DEPLOY_DIR
+            export IMAGE=$IMAGE
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d postgres redis
+            docker compose -f docker-compose.prod.yml run --rm app npm run migration:run:prod
+            docker compose -f docker-compose.prod.yml up -d app
+            docker image prune -f
+          "
+          echo "Deployed $IMAGE"
