@@ -2,7 +2,8 @@
 //
 // Jenkins prerequisites (configure once in the UI):
 //   - Plugins: Docker Pipeline, SSH Agent, Credentials Binding
-//   - The Jenkins agent has `docker` (and `node` 20 / `npm`) on PATH
+//   - The Jenkins agent has `docker` on PATH with access to the daemon
+//     (node steps run inside a node:20-alpine container, so node is NOT needed)
 //   - Credentials:
 //       'registry-cred' : username + token for ghcr.io (Username/Password)
 //       'deploy-ssh'    : SSH private key for the deploy server
@@ -27,6 +28,8 @@ pipeline {
 
   stages {
     stage('Install & Test') {
+      // Run in a node container so the Jenkins host only needs Docker, not node.
+      agent { docker { image 'node:20-alpine'; reuseNode true } }
       steps {
         sh 'npm ci'
         sh 'npm run lint'
