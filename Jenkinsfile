@@ -14,13 +14,13 @@ pipeline {
   agent any
 
   environment {
-    REGISTRY    = 'ghcr.io/TODO-your-name'          // TODO: change
-    IMAGE_NAME  = 'account-book'
+    REGISTRY    = 'ghcr.io/dev-hyunsang'
+    IMAGE_NAME  = 'account-book-backend'
     IMAGE       = "${REGISTRY}/${IMAGE_NAME}:${GIT_COMMIT.take(7)}"
-    DEPLOY_HOST = 'deploy@TODO-your-server'          // TODO: change
+    DEPLOY_HOST = 'deploy@100.119.217.13'
     DEPLOY_DIR  = '/opt/account-book'
   }
-
+1
   options {
     timestamps()
     disableConcurrentBuilds()
