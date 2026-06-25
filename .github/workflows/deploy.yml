@@ -34,12 +34,8 @@ jobs:
           JENKINS_JOB: ${{ secrets.JENKINS_JOB }}
         run: |
           set -euo pipefail
-          auth="$JENKINS_USER:$JENKINS_TOKEN"
-          # CSRF crumb (no-op if crumbs are disabled)
-          crumb=$(curl -fsS --user "$auth" \
-            "$JENKINS_URL/crumbIssuer/api/json" \
-            | python3 -c 'import sys,json;print(json.load(sys.stdin)["crumb"])' 2>/dev/null || true)
-          curl -fsS -X POST --user "$auth" \
-            ${crumb:+-H "Jenkins-Crumb: $crumb"} \
+          # ponytail: API-token auth is CSRF-crumb exempt. If "API token does not
+          # require CSRF protection" is disabled on this Jenkins, add a crumb fetch.
+          curl -fsS -X POST --user "$JENKINS_USER:$JENKINS_TOKEN" \
             "$JENKINS_URL/job/$JENKINS_JOB/build"
           echo "Triggered $JENKINS_JOB"
