@@ -7,7 +7,7 @@ name: Build, Push & Deploy
 # Prerequisites on the deploy host (one-time):
 #   - a self-hosted GitHub Actions runner is registered & running
 #   - the runner's user is in the `docker` group and is `docker login ghcr.io`
-#   - /opt/account-book/.env.prod exists (compose reads it)
+#   - ~/dev/my-account-book-backend/.env.prod exists (compose reads it) — no sudo / /opt needed
 
 on:
   push:
@@ -19,7 +19,6 @@ concurrency:
 
 env:
   IMAGE_NAME: ghcr.io/dev-hyunsang/account-book-backend
-  DEPLOY_DIR: /opt/account-book
 
 jobs:
   build-push:
@@ -71,8 +70,11 @@ jobs:
           IMAGE: ${{ needs.build-push.outputs.image }}
         run: |
           set -euo pipefail
-          # Keep the compose file on the host in sync with the repo, then run it
-          # from DEPLOY_DIR so it picks up the .env.prod that lives there.
+          # Deploy dir lives in the runner user's home — no sudo / /opt needed.
+          # Keep the compose file in sync with the repo, then run it from there
+          # so it picks up the .env.prod that lives alongside it.
+          DEPLOY_DIR="$HOME/dev/my-account-book-backend"
+          mkdir -p "$DEPLOY_DIR"
           cp docker-compose.prod.yml "$DEPLOY_DIR/docker-compose.prod.yml"
           cd "$DEPLOY_DIR"
           export IMAGE

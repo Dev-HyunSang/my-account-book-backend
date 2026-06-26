@@ -68,7 +68,7 @@ push main → GitHub Actions (.github/workflows/deploy.yml)
 
 - GitHub Actions self-hosted 러너 등록 & 실행 (Settings → Actions → Runners)
 - 러너 유저가 `docker` 그룹에 속하고 `docker login ghcr.io` 완료
-- `/opt/account-book/`에 `.env.prod` 보유 (compose가 읽음)
+- 러너 유저 홈에 `~/dev/my-account-book-backend/.env.prod` 보유 (compose가 읽음, sudo 불필요)
 
 ## 라이선스
 
