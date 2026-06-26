@@ -2,13 +2,12 @@ name: Build, Push & Deploy
 
 # Runs on merge to main:
 #   1. build the Docker image and push it to ghcr.io (built-in GITHUB_TOKEN, no PAT)
-#   2. join the tailnet via Tailscale, SSH to the deploy host, pull & restart
+#   2. a self-hosted runner ON the deploy host pulls & restarts via docker compose
 #
-# Required repo secrets:
-#   TS_OAUTH_CLIENT_ID / TS_OAUTH_SECRET -> Tailscale OAuth client (scope: auth_keys), ACL tag tag:ci
-#   DEPLOY_SSH_KEY                        -> private key that logs into deploy@<host>
-# The deploy host must already be `docker login ghcr.io` and hold
-# /opt/account-book/.env.prod (compose reads it).
+# Prerequisites on the deploy host (one-time):
+#   - a self-hosted GitHub Actions runner is registered & running
+#   - the runner's user is in the `docker` group and is `docker login ghcr.io`
+#   - /opt/account-book/.env.prod exists (compose reads it)
 
 on:
   push:
@@ -20,7 +19,6 @@ concurrency:
 
 env:
   IMAGE_NAME: ghcr.io/dev-hyunsang/account-book-backend
-  DEPLOY_HOST: deploy@100.119.217.13
   DEPLOY_DIR: /opt/account-book
 
 jobs:
@@ -64,38 +62,23 @@ jobs:
 
   deploy:
     needs: build-push
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-
-      - uses: tailscale/github-action@v3
-        with:
-          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
-          tags: tag:ci
-
-      - name: Add deploy SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
 
       - name: Deploy
         env:
           IMAGE: ${{ needs.build-push.outputs.image }}
         run: |
           set -euo pipefail
-          SSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new"
-          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
-            docker-compose.prod.yml "$DEPLOY_HOST:$DEPLOY_DIR/docker-compose.prod.yml"
-          $SSH "$DEPLOY_HOST" "
-            set -e
-            cd $DEPLOY_DIR
-            export IMAGE=$IMAGE
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d postgres redis
-            docker compose -f docker-compose.prod.yml run --rm app npm run migration:run:prod
-            docker compose -f docker-compose.prod.yml up -d app
-            docker image prune -f
-          "
+          # Keep the compose file on the host in sync with the repo, then run it
+          # from DEPLOY_DIR so it picks up the .env.prod that lives there.
+          cp docker-compose.prod.yml "$DEPLOY_DIR/docker-compose.prod.yml"
+          cd "$DEPLOY_DIR"
+          export IMAGE
+          docker compose -f docker-compose.prod.yml pull
+          docker compose -f docker-compose.prod.yml up -d postgres redis
+          docker compose -f docker-compose.prod.yml run --rm app npm run migration:run:prod
+          docker compose -f docker-compose.prod.yml up -d app
+          docker image prune -f
           echo "Deployed $IMAGE"

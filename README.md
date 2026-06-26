@@ -52,32 +52,23 @@ npm run migration:run        # 적용
 
 ## 배포 파이프라인
 
-`main` 브랜치 푸시 → 자동 배포. Jenkins는 **Tailscale tailnet 내부**에 있어 공인 포트를 열지 않습니다.
+`main` 브랜치 푸시 → GitHub Actions가 자동으로 빌드·배포합니다.
 
 ```text
-push main
-  → GitHub Actions (.github/workflows/deploy.yml)
-      Actions 러너가 Tailscale로 tailnet 합류 → Jenkins API 트리거
-  → Jenkins (Jenkinsfile)
-      1. Install & Test   (node:20-alpine 컨테이너 안에서 lint + unit test)
-      2. Build & Push     (Docker 이미지 빌드 → ghcr.io push)
-      3. Deploy           (SSH로 배포 서버에서 docker compose pull & up + 마이그레이션)
+push main → GitHub Actions (.github/workflows/deploy.yml)
+  1. build-push  (GitHub 호스트 러너)        Docker 빌드 → ghcr.io push
+  2. deploy      (배포 서버의 self-hosted 러너)  docker compose pull & up + 마이그레이션
 ```
 
 ### 필요한 설정
 
-**GitHub repo secrets** (Actions → Jenkins 트리거):
-`TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET`, `JENKINS_URL`, `JENKINS_USER`, `JENKINS_TOKEN`, `JENKINS_JOB`
+**GitHub repo secrets**: 없음 — `build-push`는 자동 제공되는 `GITHUB_TOKEN`으로 ghcr에 push합니다.
 
-**Jenkins credentials** (`Jenkinsfile` 상단 주석 참고):
+**배포 서버 (self-hosted 러너)**:
 
-- `registry-cred` — ghcr.io username + token
-- `deploy-ssh` — 배포 서버 SSH 키
-- repo 체크아웃용 SSH deploy key
-
-**배포 서버**:
-
-- Docker + compose, `docker login ghcr.io` 완료, `/opt/account-book/.env.prod` 보유
+- GitHub Actions self-hosted 러너 등록 & 실행 (Settings → Actions → Runners)
+- 러너 유저가 `docker` 그룹에 속하고 `docker login ghcr.io` 완료
+- `/opt/account-book/`에 `.env.prod` 보유 (compose가 읽음)
 
 ## 라이선스
 
