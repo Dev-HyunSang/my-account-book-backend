@@ -19,7 +19,8 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      # host 4040 → container 3000 (3000 is taken by Grafana on the deploy host)
+      - "4040:3000"
     restart: unless-stopped
     # Single-instance only — do NOT scale this service.
     # The in-process scheduler would produce duplicate ledger writes.
