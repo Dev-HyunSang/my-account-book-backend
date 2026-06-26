@@ -4,10 +4,11 @@ name: Build, Push & Deploy
 #   1. build the Docker image and push it to ghcr.io (built-in GITHUB_TOKEN, no PAT)
 #   2. a self-hosted runner ON the deploy host pulls & restarts via docker compose
 #
-# Prerequisites on the deploy host (one-time):
-#   - a self-hosted GitHub Actions runner is registered & running
-#   - the runner's user is in the `docker` group and is `docker login ghcr.io`
-#   - ~/dev/my-account-book-backend/.env.prod exists (compose reads it) — no sudo / /opt needed
+# Prerequisites (one-time):
+#   - a self-hosted GitHub Actions runner is registered & running on the host
+#   - `docker` is on the runner's PATH (Docker Desktop running)
+#   - repo secret ENV_PROD holds the full .env.prod (written out each deploy)
+#   - ghcr auth is written to an isolated docker config in the step (no host login)
 
 on:
   push:
@@ -72,6 +73,7 @@ jobs:
           IMAGE: ${{ needs.build-push.outputs.image }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
+          ENV_PROD: ${{ secrets.ENV_PROD }}
         run: |
           set -euo pipefail
           # Isolated docker config with the ghcr auth written directly, so we
@@ -89,6 +91,9 @@ jobs:
           DEPLOY_DIR="$HOME/dev/my-account-book-backend"
           mkdir -p "$DEPLOY_DIR"
           cp docker-compose.prod.yml "$DEPLOY_DIR/docker-compose.prod.yml"
+          # Write .env.prod from the secret each run — no reliance on a
+          # hand-placed host file the runner may not see.
+          printf '%s' "$ENV_PROD" > "$DEPLOY_DIR/.env.prod"
           cd "$DEPLOY_DIR"
           export IMAGE
           docker compose -f docker-compose.prod.yml pull
