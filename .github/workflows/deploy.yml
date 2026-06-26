@@ -74,11 +74,12 @@ jobs:
           GHCR_USER: ${{ github.actor }}
         run: |
           set -euo pipefail
-          # Isolated docker config dir so we never touch the host credential
-          # store — the macOS keychain can't be unlocked in a CI session.
+          # Isolated docker config with the ghcr auth written directly, so we
+          # never invoke the osxkeychain helper (it can't unlock in CI: -25308).
           DOCKER_CONFIG="$(mktemp -d)"; export DOCKER_CONFIG
           trap 'rm -rf "$DOCKER_CONFIG"' EXIT
-          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+          AUTH=$(printf '%s:%s' "$GHCR_USER" "$GHCR_TOKEN" | base64 | tr -d '\n')
+          printf '{"auths":{"ghcr.io":{"auth":"%s"}}}' "$AUTH" > "$DOCKER_CONFIG/config.json"
           # Deploy dir lives in the runner user's home — no sudo / /opt needed.
           # Keep the compose file in sync with the repo, then run it from there
           # so it picks up the .env.prod that lives alongside it.

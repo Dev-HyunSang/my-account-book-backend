@@ -9,7 +9,9 @@
       "Bash(git checkout *)",
       "Bash(git push *)",
       "Bash(npx eslint *)",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(git add *)",
+      "Bash(git commit -q -m 'ci: log in to ghcr with isolated docker config \\(avoid locked keychain\\) *)"
     ]
   }
 }
