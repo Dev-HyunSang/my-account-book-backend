@@ -80,6 +80,9 @@ jobs:
           trap 'rm -rf "$DOCKER_CONFIG"' EXIT
           AUTH=$(printf '%s:%s' "$GHCR_USER" "$GHCR_TOKEN" | base64 | tr -d '\n')
           printf '{"auths":{"ghcr.io":{"auth":"%s"}}}' "$AUTH" > "$DOCKER_CONFIG/config.json"
+          # The compose plugin lives in the host config dir we just bypassed —
+          # link it back in so `docker compose` is still found.
+          ln -s "$HOME/.docker/cli-plugins" "$DOCKER_CONFIG/cli-plugins"
           # Deploy dir lives in the runner user's home — no sudo / /opt needed.
           # Keep the compose file in sync with the repo, then run it from there
           # so it picks up the .env.prod that lives alongside it.
