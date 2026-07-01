@@ -46,5 +46,35 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Self-hosted push server for mobile notifications (ntfy.sh app subscribes).
+  # The app publishes to it at http://ntfy/<topic> over the compose network.
+  ntfy:
+    image: binwiederhier/ntfy:v2.11.0
+    command: serve
+    environment:
+      # Public URL the mobile app subscribes to — set to your real domain.
+      NTFY_BASE_URL: ${NTFY_BASE_URL:-http://localhost:8090}
+      # Listen on 8090 in-container so it matches the published port.
+      NTFY_LISTEN_HTTP: ":8090"
+      NTFY_CACHE_FILE: /var/cache/ntfy/cache.db
+      NTFY_BEHIND_PROXY: "true"
+      # Auth: nobody can read/write without an account. Create users after deploy
+      # (see README). Token/creds go in the mobile app and the NestJS publisher.
+      NTFY_AUTH_FILE: /var/cache/ntfy/user.db
+      NTFY_AUTH_DEFAULT_ACCESS: deny-all
+      TZ: Asia/Seoul
+    volumes:
+      - ntfy-cache:/var/cache/ntfy
+    ports:
+      # host 8090 → container 80 (3000 Grafana, 4040 app already taken)
+      - "8090:8090"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8090/v1/health | grep -q '\"healthy\":true'"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  ntfy-cache:
